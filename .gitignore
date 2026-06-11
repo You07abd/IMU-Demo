@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Telemetry logs and parameter dumps (can be large; keep out of the repo)
+*.tlog
+*.tlog.raw
+*.parm
+
+# Local agent/tooling state
+/.claude
+/.agents
+/.superpowers
+
+# Internal design notes
+/docs/superpowers
