@@ -48,9 +48,15 @@ Edit the constants at the top of `imu_demo.py` to adjust when the warning trigge
 ## Tests
 
 ```
-python3 -m pytest tests/
+python3 -m unittest discover tests
 ```
+
+No extra packages needed — the tests use Python's built-in `unittest`.
 
 ## Repository notes
 
 Telemetry logs (`*.tlog`, `*.tlog.raw`) and parameter dumps (`*.parm`) are git-ignored — they can grow to tens of megabytes per session.
+
+## License
+
+[MIT](LICENSE)
