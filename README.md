@@ -6,7 +6,14 @@ Display only — it never sends commands that change autopilot state.
 
 Works on Windows, macOS, and Linux.
 
-## Quick start (no hardware needed)
+## Install
+
+```
+pip install imu-flight-monitor
+imu-demo
+```
+
+Or run from source:
 
 ```
 pip install -r requirements.txt
@@ -70,6 +77,17 @@ Edit the constants at the top of `safety.py`:
 | `safety.py` | Warning thresholds + beep |
 | `sources.py` | Telemetry model, MAVLink source, simulator |
 | `laptop_imu.py` | Laptop IMU probes (Linux iio, Windows sensors) |
+
+## Publishing a new version
+
+1. Bump `version` in `pyproject.toml`.
+2. Build and upload:
+   ```
+   pip install build twine
+   python -m build
+   twine upload dist/*
+   ```
+   `twine` will ask for your PyPI credentials the first time (free account at pypi.org).
 
 ## Tests
 
