@@ -84,7 +84,7 @@ Edit the constants at the top of `safety.py`:
 2. Build and upload:
    ```
    pip install build twine
-   python -m build
+   python3 -m build
    twine upload dist/*
    ```
    `twine` will ask for your PyPI credentials the first time (free account at pypi.org).
