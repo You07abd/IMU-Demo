@@ -1,49 +1,75 @@
-# Pixhawk IMU Demo — Classroom Safety Monitor
+# IMU Flight Monitor
 
-Real-time artificial-horizon (PFD) display with a crash-warning overlay, driven by MAVLink ATTITUDE messages read directly from a Pixhawk over USB. Display only — it never sends commands to the autopilot.
+A small cross-platform dashboard that shows a real-time artificial horizon (PFD) with a crash-warning overlay, plus optional GPS and lidar panels. It reads from **any MAVLink flight controller** (ArduPilot or PX4 — Pixhawk, Cube, Kakute, SpeedyBee, …), from your **laptop's own IMU** if it has one, or from a built-in **simulation** so it works with no hardware at all.
+
+Display only — it never sends commands that change autopilot state.
 
 Works on Windows, macOS, and Linux.
 
-## Hardware
+## Quick start (no hardware needed)
 
-- Pixhawk (e.g. 6c) running ArduPilot, connected to the computer via USB
-- No motors, propellers, or servos — display only
+```
+pip install -r requirements.txt
+python3 imu_demo.py
+```
 
-## Software requirements
+Pick **Demo: Simulated** from the Source dropdown and press **Connect**. You'll get a gentle flight with a crash warning every ~30 s, a GPS ground track, and a lidar map painting a virtual room.
 
-- Python 3
-- `pip install -r requirements.txt` (pymavlink + pyserial)
-- `tkinter` — included with standard Python on Windows and macOS; on Linux: `sudo apt install python3-tk`
+On Linux you may first need `sudo apt install python3-tk`; tkinter ships with standard Python on Windows and macOS.
 
-The alert beep uses whatever the OS provides (`winsound` on Windows, `afplay` on macOS, `paplay` on Linux, with Tk's bell as a fallback) — no extra install needed.
+## Sources
 
-## Run
+| Source | What you get |
+|---|---|
+| **Serial port** (flight controller) | Attitude from `ATTITUDE`; GPS panel from `GPS_RAW_INT`; lidar map from `DISTANCE_SENSOR` / `OBSTACLE_DISTANCE`. Panels for sensors your FC doesn't have simply grey out — the horizon works with nothing but the IMU. |
+| **Demo: Laptop IMU** | Appears only on machines with a readable built-in IMU (many 2-in-1s/convertibles). Tilt the laptop and the horizon follows. Yaw shows `—`; GPS/lidar stay greyed. On Windows this needs `pip install winsdk`. |
+| **Demo: Simulated** | Always available. Full fake flight: attitude, GPS circuit, lidar room scan. |
 
-1. Connect the Pixhawk via USB.
-2. ```
-   python3 imu_demo.py
-   ```
+## Connecting a flight controller
 
-The serial port is autodetected from the USB device description. If detection picks the wrong port (or fails), set `MAV_PORT` at the top of `imu_demo.py` to your port, e.g. `'COM5'` on Windows or `'/dev/ttyACM0'` on Linux.
+1. Plug the FC in over USB (no motors/props needed — display only).
+2. Open the Source dropdown — ports refresh each time you open it. A likely flight controller is pre-selected when one is found.
+3. Press **Connect**. The link indicator turns green and shows the attitude message rate.
 
-> **Note:** the script opens the serial port directly, so close Mission Planner / QGroundControl (or anything else holding the port) before running it. If telemetry stops, the display greys out and shows **NO DATA** after one second.
+Any board that speaks MAVLink over serial works. The app asks the FC for the message streams it displays (`MAV_CMD_SET_MESSAGE_INTERVAL`, with the legacy stream request as fallback).
 
-## Thresholds
+The Source box also accepts a typed MAVLink connection string — e.g. `udpin:0.0.0.0:14551` to read a MAVProxy UDP output while QGC or MAVProxy keeps the serial port.
 
-Edit the constants at the top of `imu_demo.py` to adjust when the warning triggers:
+## The display
 
-| Constant          | Default | Meaning                                        |
-|-------------------|---------|------------------------------------------------|
-| `PITCH_MIN_DEG`   | -30     | Nose-down limit (degrees)                      |
-| `PITCH_MAX_DEG`   | 35      | Nose-up limit (degrees)                        |
-| `ROLL_MAX_ABS_DEG`| 45      | Maximum roll in either direction (degrees)     |
+- **PFD** (left): artificial horizon with pitch ladder, roll arc, and heading tape. Goes grey with **NO DATA** if attitude stops arriving for 1 s.
+- **ATTITUDE / GPS / LIDAR MAP cards** (right): each greys out independently after 2 s without data, or shows *not available* if the source can never provide it.
+- **GPS card**: fix type, satellites, position, altitude, speed, and an offline north-up track plot (first fix = origin). Click the card to pop it out into a resizable window.
+- **LIDAR MAP card**: accumulates rangefinder/proximity returns into a north-up point map, oriented by the vehicle's yaw — keep the vehicle still and rotate it, and the outline of the room paints itself. **Clear** resets the map; click the card to pop it out.
+- **Status bar**: green **SAFE** / red **CRASH WARNING** with the live angles. One beep plays each time a warning begins.
 
-## What the display shows
+## Warning thresholds
 
-- **SAFE** (green banner): roll and pitch are within all thresholds.
-- **CRASH WARNING** (red banner): at least one threshold is exceeded.
-- An audible beep plays once each time the warning state is first triggered; it does not repeat until the aircraft returns to safe and exceeds a threshold again.
-- **NO DATA** (grey status bar): no ATTITUDE message received for over a second.
+Edit the constants at the top of `safety.py`:
+
+| Constant           | Default | Meaning                                    |
+|--------------------|---------|--------------------------------------------|
+| `PITCH_MIN_DEG`    | -30     | Nose-down limit (degrees)                  |
+| `PITCH_MAX_DEG`    | 35      | Nose-up limit (degrees)                    |
+| `ROLL_MAX_ABS_DEG` | 45      | Maximum roll in either direction (degrees) |
+
+## Troubleshooting
+
+- **"port busy or no permission"** — close Mission Planner / QGroundControl (or anything else holding the port). On Linux, add yourself to the serial group: `sudo usermod -aG dialout $USER` (log out and back in).
+- **Wrong/stale port selected** — re-open the dropdown to refresh; on Linux, stable `/dev/serial/by-id/...` paths are listed when available, so the right board is easy to spot.
+- **"no MAVLink heartbeat"** — wrong port, wrong baud device, or the FC is still booting; wait a few seconds and reconnect.
+- **No "Demo: Laptop IMU" entry** — your machine has no readable IMU (most regular laptops and desktops don't). Use the simulator instead.
+
+## Code layout
+
+| File | Purpose |
+|---|---|
+| `imu_demo.py` | Entry point: window, toolbar, poll loop |
+| `pfd.py` | Artificial-horizon canvas |
+| `panels.py` | Attitude / GPS / lidar cards |
+| `safety.py` | Warning thresholds + beep |
+| `sources.py` | Telemetry model, MAVLink source, simulator |
+| `laptop_imu.py` | Laptop IMU probes (Linux iio, Windows sensors) |
 
 ## Tests
 
